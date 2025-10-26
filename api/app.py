@@ -7,7 +7,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import ast
+import io
 from flask import Flask, request, jsonify
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications import mobilenet_v2
 
 # --- 1. Initialize Flask App & Database (ROBUST PATHS) ---
 app = Flask(__name__)
@@ -67,9 +70,21 @@ try:
         tag_binarizer = pickle.load(f)
         
     print("All V2 models loaded successfully.")
+
+    print("Loading CV model...")
+    cv_model_path = os.path.join(MODEL_DIR, 'dish_classifier_v1.h5')
+    cv_model = tf.keras.models.load_model(cv_model_path, compile=False)
+    
+    # Load the class names
+    class_names_path = os.path.join(MODEL_DIR, 'food_101_class_names.txt')
+    with open(class_names_path, 'r') as f:
+        food_101_class_names = [line.strip() for line in f.readlines()]
+    print("CV model loaded.")
+
 except Exception as e:
     print(f"CRITICAL ERROR: Could not load models. {e}")
     model = None
+    cv_model = None
 
 
 # Helper function (no changes)
@@ -157,6 +172,15 @@ def make_prediction_v2(dish_name, room_temp, room_humidity):
     
     return final_prediction[0][0], final_prediction[0][1]
 
+def load_and_prep_image(img_bytes):
+    # Load image from bytes
+    img = image.load_img(io.BytesIO(img_bytes), target_size=(224, 224))
+    # Convert to array
+    img_array = image.img_to_array(img)
+    # Expand dimensions to create a batch of 1
+    img_array_expanded = np.expand_dims(img_array, axis=0)
+    # Preprocess the image for MobileNetV2
+    return mobilenet_v2.preprocess_input(img_array_expanded)
 
 # --- 5. Define API Endpoints ---
 
@@ -217,6 +241,46 @@ def feedback():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route('/classify_image', methods=['POST'])
+def classify_image():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and cv_model:
+        try:
+            # 1. Read and prep the image
+            img_bytes = file.read()
+            prepped_image = load_and_prep_image(img_bytes)
+            
+            # 2. Make CV prediction
+            predictions = cv_model.predict(prepped_image)
+            predicted_index = np.argmax(predictions[0])
+            dish_name = food_101_class_names[predicted_index]
+            
+            # Replace underscores with spaces (e.g., "pork_chop" -> "pork chop")
+            dish_name = dish_name.replace("_", " ")
+            
+            print(f"CV Model classified image as: {dish_name}")
+            
+            # 3. Call your *existing* prediction function
+            # We use default room temp/humidity for this example
+            pred_temp, pred_duration = make_prediction_v2(dish_name, 20.0, 50.0)
+
+            # 4. Return the final, combined prediction
+            return jsonify({
+                'classified_dish': dish_name,
+                'predicted_temp': int(round(pred_temp, 0)),
+                'predicted_duration': int(round(pred_duration, 0))
+            })
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+    
+    return jsonify({"error": "CV model not loaded"}), 500
 
 # --- 6. Run the Application ---
 if __name__ == '__main__':
