@@ -1,0 +1,24 @@
+# Python virtual environment
+venv/
+__pycache__/
+
+# Large Data Files (NEVER commit raw data)
+data/raw/
+*.csv
+*.pkl
+*.db
+
+# ML Models (NEVER commit model binaries)
+*.h5
+*.tflite
+ml_model/models/
+
+# Notebook cache
+.ipynb_checkpoints
+
+# VS Code settings
+.vscode/
+
+# System files (if on Mac or Windows)
+.DS_Store
+Thumbs.db

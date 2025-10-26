@@ -1,0 +1,25 @@
+# ---------------------------------
+# Core AI, ML, and Data Processing
+# ---------------------------------
+tensorflow       # The core machine learning framework for building the model
+pandas           # For loading and processing all .csv data
+numpy            # For numerical operations and data augmentation
+scikit-learn     # For preprocessing (StandardScaler, OrdinalEncoder, MultiLabelBinarizer)
+nltk             # For the initial text extraction (regex parsing)
+matplotlib       # For plotting model accuracy/loss in the notebook
+
+# ---------------------------------
+# Backend API
+# ---------------------------------
+flask            # For creating the web server API (/predict, /feedback)
+
+# ---------------------------------
+# Frontend UI
+# ---------------------------------
+streamlit        # For building the interactive web app
+requests         # For the frontend (Streamlit) to call the backend (Flask)
+
+# ---------------------------------
+# Notebook Environment
+# ---------------------------------
+notebook         # For running the .ipynb notebook files
