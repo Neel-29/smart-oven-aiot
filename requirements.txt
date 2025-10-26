@@ -7,6 +7,8 @@ numpy            # For numerical operations and data augmentation
 scikit-learn     # For preprocessing (StandardScaler, OrdinalEncoder, MultiLabelBinarizer)
 nltk             # For the initial text extraction (regex parsing)
 matplotlib       # For plotting model accuracy/loss in the notebook
+tensorflow-datasets       # For loading Food-101 dataset (CV model)
+opencv-python-headless    # For image processing (CV model)
 
 # ---------------------------------
 # Backend API

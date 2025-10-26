@@ -1,6 +1,6 @@
-# Smart Oven AIoT Project 🧑‍🍳🧠
+# Smart Oven AIoT Project 🧑‍🍳🧠📸
 
-This project is a proof-of-concept for an AIoT (Artificial Intelligence + Internet of Things) Smart Oven. It moves beyond traditional "dumb" ovens by using a machine learning model to predict optimal cooking times and temperatures based on rich contextual data.
+This project is a proof-of-concept for an AIoT (Artificial Intelligence + Internet of Things) Smart Oven. It moves beyond traditional "dumb" ovens by using machine learning models to predict optimal cooking times/temperatures based on rich contextual data and **automatically recognize dishes using a camera**.
 
 The system features a closed-loop reinforcement learning pipeline, allowing it to learn from user feedback and improve its predictions over time.
 
@@ -14,26 +14,30 @@ Traditional ovens are blunt instruments. They heat based on fixed presets, ignor
 
 This leads to overcooked cookies, undercooked pizza, and unpredictable results. This project transforms cooking from guesswork to data-driven, personalized perfection.
 
-## 2. The Solution: AI + IoT
+## 2. The Solution: AI + IoT + Vision 👁️
 
 This project simulates a full AIoT ecosystem:
-* **IoT (Sensors):** We simulate sensor data like `Room_Temp` and `Room_Humidity` as inputs for the model.
-* **AI (The Brain):** A multi-input TensorFlow/Keras model predicts the `Oven_Temp` and `Oven_Duration`. Unlike a simple model, this one understands **ingredients** and **dish categories (tags)** to make intelligent, first-time predictions.
-* **Reinforcement Learning (The Secret Sauce):** After every dish, the user provides feedback (✅ Perfect, 🤏 Undercooked, ❌ Overcooked). This feedback is logged and used by a **Reinforcement Engine** to fine-tune the model, making it smarter and more personalized with every use.
+* **IoT (Sensors):** We simulate sensor data like `Room_Temp` and `Room_Humidity` as inputs.
+* **Computer Vision:** A camera (simulated via file upload) automatically recognizes the dish using a fine-tuned MobileNetV2 model trained on Food-101.
+* **AI (Prediction Brain):** A multi-input TensorFlow/Keras model predicts the `Oven_Temp` and `Oven_Duration`. It uses the **recognized dish name**, **ingredients**, **tags**, and sensor data for intelligent, first-time predictions.
+* **Reinforcement Learning (The Secret Sauce):** After every dish, the user provides feedback (✅ Perfect, 🤏 Undercooked, ❌ Overcooked). This feedback is logged and used by a **Reinforcement Engine** to fine-tune the prediction model, making it smarter and more personalized.
 
 ## 3. Architecture Overview 🏗️
 
-This project consists of three main components that run simultaneously:
+The system now includes a separate Computer Vision model that feeds into the main prediction pipeline.
 
-1.  **Backend API (Flask):** The "brain" that loads the trained AI model (`.h5`) and serves predictions via a REST API. It also has a `/feedback` endpoint to log user ratings to a database.
-2.  **Frontend App (Streamlit):** An interactive web UI where the user can enter a dish name, get an AI-powered recommendation, and provide feedback on the results.
-3.  **Reinforcement Engine (Python Script):** An offline script (`r1_engine.py`) that reads all the user feedback from the database, calculates "corrected" cooking parameters, and re-trains the model.
-
-![A diagram showing the flow: User Input -> Streamlit Frontend -> Flask API -> AI Model -> Prediction -> User Feedback -> Database -> Reinforcement Engine -> New AI Model](https://i.imgur.com/g0P1S4c.png)
+1.  **Input:** User provides an image OR types a dish name.
+2.  **Frontend (Streamlit):** Sends the input to the appropriate API endpoint.
+3.  **Backend API (Flask):**
+    * `/classify_image`: Receives an image, uses the **CV Model** to get a `dish_name`.
+    * `/predict`: Receives a `dish_name` (either from CV or manual input) and sensor values. It looks up the dish's ingredients/tags.
+    * Both endpoints then feed the `dish_name`, `ingredients`, `tags`, and sensor values into the **Prediction Model** to get `Temp` and `Duration`.
+    * `/feedback`: Logs user ratings to a database.
+4.  **Reinforcement Engine (Python Script):** Offline script reads feedback, calculates corrections, and re-trains the **Prediction Model**.
 
 ## 4. Technology Stack 🛠️
 
-* **AI & Data Science:** TensorFlow (Keras), Pandas, NumPy, Scikit-learn, NLTK
+* **AI & Data Science:** TensorFlow (Keras), Pandas, NumPy, Scikit-learn, NLTK, TensorFlow Datasets, OpenCV (headless)
 * **Backend API:** Flask
 * **Frontend UI:** Streamlit
 * **Data Storage:** SQLite (for `oven_logs.db`)
@@ -50,14 +54,12 @@ Follow these steps to get the full system running locally.
     git clone [https://github.com/](https://github.com/)<your-username>/smart-oven-aiot.git
     cd smart-oven-aiot
     ```
-
 2.  **Create a virtual environment:**
     ```bash
     python -m venv venv
     .\venv\Scripts\activate  # On Windows
     # source venv/bin/activate  # On Mac/Linux
     ```
-
 3.  **Install requirements:**
     ```bash
     pip install -r requirements.txt
@@ -65,25 +67,26 @@ Follow these steps to get the full system running locally.
 
 ### Step 2: Data Preparation & Model Training
 
-You must run the Jupyter notebooks in order to create the dataset and train the initial AI model.
+You must run the Jupyter notebooks in order to create the datasets and train the AI models.
 
-1.  **Run Notebook 1 (Data ETL):**
+1.  **Run Notebook 1 (Prediction Data ETL):**
     * Launch Jupyter: `jupyter notebook`
     * Open `/notebooks/eda_and_extraction.ipynb`.
-    * Run all cells from top to bottom. This will:
-        * Parse the raw CSV files.
-        * Extract oven temperatures and times using regex.
-        * Merge ingredients, tags, and ratings.
-        * Augment the data with simulated sensor values.
-        * Save the final `processed_oven_recipes_v2.csv` file.
+    * Run all cells from top to bottom. This creates `processed_oven_recipes_v2.csv`.
 
-2.  **Run Notebook 2 (Model Training):**
+2.  **Run Notebook 2 (Prediction Model Training):**
     * Open `/notebooks/model_prototyping.ipynb`.
-    * Run all cells from top to bottom. This will:
-        * Load the `v2` dataset.
-        * Preprocess all 4 inputs (Name, Env, Ingredients, Tags).
-        * Build and train the multi-input Keras model.
-        * Save the trained model (`oven_predictor_v2.h5`) and all 5 preprocessors (`.pkl`) to `/ml_model/models/`.
+    * Run all cells from top to bottom. This trains the prediction model and saves `oven_predictor_vX.h5` and its preprocessors.
+
+3.  **Prepare Food-101 Data (CV Model):**
+    * **Manual Download:** Download `food-101.tar.gz` from [http://data.vision.ee.ethz.ch/cvl/food-101.tar.gz](http://data.vision.ee.ethz.ch/cvl/food-101.tar.gz).
+    * **Extract:** Use WinRAR/7-Zip to extract the archive.
+    * **Move:** Find the `images` folder inside the extracted `food-101` folder. Move this `images` folder to `D:\smart-oven-aiot\data\raw\`. The final path should be `D:\smart-oven-aiot\data\raw\images\`.
+
+4.  **Run Notebook 3 (CV Model Training):**
+    * Open `/notebooks/03_computer_vision_model.ipynb`.
+    * **Important:** Ensure the code uses the **manual loading** method (`tf.keras.utils.image_dataset_from_directory`) pointing to `../data/raw/images`.
+    * Run all cells. This will train the dish classifier and save `dish_classifier_v1.h5` and `food_101_class_names.txt`.
 
 ### Step 3: Run the Live System
 
@@ -94,28 +97,20 @@ You will need **two terminals** running at the same time.
     cd api
     python app.py
     ```
-    *(Leave this terminal running. It will load the model and serve predictions at `http://127.0.0.1:5000`)*
+    *(Ensure `app.py` is configured to load the latest prediction model, e.g., `v3.h5`. It will also load the CV model.)*
 
 2.  **Terminal 2: Run the Frontend App:**
     ```bash
     # From the project root directory
     streamlit run frontend/app_frontend.py
     ```
-    *(This will automatically open the Streamlit app in your browser.)*
+    *(This will open the Streamlit app in your browser.)*
 
-### Step 4: Test the Reinforcement Loop
+### Step 4: Use the App & Reinforcement Loop
 
-1.  **Use the App:** Go to the Streamlit app in your browser.
-2.  **Get a Prediction:** Type in a dish name (e.g., "arriba baked winter squash mexican style") and click "Get AI Recommendation."
-3.  **Give Feedback:** You'll see the AI's prediction. Click one of the feedback buttons (e.g., "Overcooked / Dry ❌"). This saves your feedback to `oven_logs.db`.
-4.  **Stop your API** (Ctrl+C in Terminal 1).
-5.  **Run the Engine:** In a terminal, run the reinforcement engine to re-train the model on your feedback:
-    ```bash
-    cd ml_model
-    python r1_engine.py
-    ```
-    *(This will create a new, smarter `oven_predictor_v3.h5`)*
-6.  **Update the API:**
-    * Open `/api/app.py`.
-    * Change the model path from `v2.h5` to `v3.h5`.
-7.  **Relaunch the API** (Terminal 1) and test again. The prediction for that same dish will now be corrected based on your feedback. The loop is complete.
+1.  **Choose Input:** Select "Upload Image" or "Enter Name Manually".
+2.  **Provide Input:** Upload an image or type a name.
+3.  **Adjust Sensors:** Modify the simulated temperature/humidity sliders.
+4.  **Get Final Recommendation:** Click the button to see the AI's prediction based on all inputs.
+5.  **Give Feedback:** Click one of the feedback buttons (✅ 🤏 ❌).
+6.  **(Offline) Retrain:** Stop the API, run `python ml_model/r1_engine.py` to create the next model version (e.g., `v4.h5`), update `api/app.py` to use `v4.h5`, and restart the API. The system is now smarter.
