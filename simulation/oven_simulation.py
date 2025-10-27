@@ -1,5 +1,3 @@
-# In /3_simulation/oven_simulator.py
-
 import time
 
 class SimulatedOven:
@@ -22,7 +20,6 @@ class SimulatedOven:
         Public command to start the oven, sent from the API.
         Converts F to C for simulation.
         """
-        # Convert F (from model) to C (for simulation)
         self.target_temp = (target_temp_f - 32) * 5.0 / 9.0
         self.cook_time_remaining_s = duration_min * 60
         
@@ -43,25 +40,20 @@ class SimulatedOven:
         Simulates the oven's internal sensors.
         This would be real sensor data on an ESP32.
         """
-        # Simulate heating
         if self.relay_state == "ON":
             if self.current_temp < self.target_temp:
-                self.current_temp += 5.0  # Heats up 5 deg per "tick"
+                self.current_temp += 5.0
             else:
-                # Simple overshoot/undershoot simulation
                 self.current_temp += (self.target_temp - self.current_temp) * 0.1
             
-            # Simulate humidity change
             if self.current_humidity > 15.0:
-                self.current_humidity -= 0.1 # Dries out slowly
+                self.current_humidity -= 0.1 
         
-        # Simulate cooling if off (but not yet at room temp)
         elif self.relay_state == "OFF" and self.current_temp > 20.0:
-            self.current_temp -= 1.0 # Cools 1 deg per "tick"
+            self.current_temp -= 1.0
 
-        # Decrement cook time
         if self.is_cooking and self.cook_time_remaining_s > 0:
-            self.cook_time_remaining_s -= 1 # Each "tick" is 1 second
+            self.cook_time_remaining_s -= 1
             
             if self.cook_time_remaining_s == 0:
                 print("[OVEN_SIM] COOKING COMPLETE. DING!")
@@ -77,19 +69,15 @@ class SimulatedOven:
         }
 
 if __name__ == '__main__':
-    # A quick test to see the simulator run
     print("--- Running Oven Simulation Test ---")
     oven = SimulatedOven()
     
-    # Simulate starting a cook (e.g., 400°F for 1 minute)
     oven.start_cooking(target_temp_f=400, duration_min=1)
     
-    # Run simulation for 70 seconds (10s preheat + 60s cook)
     for i in range(70):
-        time.sleep(0.1) # 100ms delay per "second"
+        time.sleep(0.1) 
         sensors = oven.get_sensor_values()
         
-        # Only print a log every 5 seconds
         if i % 5 == 0:
             print(f"[LOG] Sec {i}: Temp={sensors['temperature_c']:.0f}C, "
                   f"Time Left={sensors['time_remaining_s']}s, "
